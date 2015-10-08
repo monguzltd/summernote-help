@@ -1,6 +1,10 @@
 {
-  "name": "summernote",
-  "version": "0.6.4",
+  "name": "summernote-help",
+  "version": "1.0.0",
+  "authors": [
+    "zerdos91 <zerdos@monguz.hu>"
+  ],
+  "description": "summernote fork - Image browse from help orientdb, with rest calls",
   "main": [
     "./dist/summernote.js",
     "./dist/summernote.css"
@@ -12,6 +16,10 @@
     "test",
     "tests"
   ],
+    "repository": {
+    "type": "git",
+    "url": "git://github.com/monguzltd/summernote-help.git"
+  },
   "dependencies": {
     "jquery": ">= 1.9.0",
     "bootstrap": ">= 3.0.1",
