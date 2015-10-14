@@ -2217,7 +2217,7 @@
         ['para', ['ul', 'ol', 'paragraph']],
         ['height', ['height']],
         ['table', ['table']],
-        ['insert', ['link', 'picture', 'hr']],
+        ['insert', ['link', 'picture', 'pastedoc', 'hr']],
         ['view', ['fullscreen', 'codeview']],
         ['help', ['help']]
       ],
@@ -2240,7 +2240,7 @@
         ['font', ['bold', 'underline', 'clear']],
         ['para', ['ul', 'paragraph']],
         ['table', ['table']],
-        ['insert', ['link', 'picture']]
+        ['insert', ['link', 'picture', 'pastedoc']]
       ],
 
       // style tag
@@ -2289,7 +2289,8 @@
       onkeyup: null,            // keyup
       onkeydown: null,          // keydown
       onImageUpload: null,      // imageUpload
-      onImageSearch: null,      // imageUpload
+      onImageSearch: null,      // imageSearch
+      onDocSearch: null,        // docSerach
       onImageUploadError: null, // imageUploadError
       onMediaDelete: null,      // media delete
       onToolbarClick: null,
@@ -2417,6 +2418,16 @@
           url: 'To what URL should this link go?',
           openInNewWindow: 'Open in new window'
         },
+        pastedoc:{
+            link: 'Link',
+            insert: 'Insert Doc',
+            unlink: 'Unlink',
+            edit: 'Edit',
+            pastedoc: 'Paste Document from database',
+            textToDisplay: 'Text to display',
+            url: 'To what URL should this link go?',
+            openInNewWindow: 'Open in new window'
+          },
         table: {
           table: 'Table'
         },
@@ -3538,8 +3549,60 @@
         }
       });
     };
+        
+    this.searchInDocChoice = function($editable, sUrl, filename) {
+        var rng = this.createRange($editable);
+            event.preventDefault();
+            $('.paginator').bootpag({
+                total: 50, // total pages
+                page: 1, // default page
+                maxVisible: 5, // visible pagination
+                firstLastUse: true,
+                first: '←',
+                last: '→',
+                leaps: false
+            });
+            setTimeout(function() {
+                $('.paginator').trigger("page");
+            }, 1);
+            var form = $(this);
+            $('.paginator').on("page", function(event, num) {
+                if (num === undefined) {
+                    num = 1;
+                }
+                $('.doc-contents').empty();
+                for (var i = num - 1; i < num + 9; ++i) {
+                   $('.doc-contents').append("<div class='doc-content row-fluid' id='" + i + "'>" +"<h5>" +filename[i] +"</h5>" + "&nbsp;&nbsp;<button type='button' id='" + sUrl[i] + "' class='btn btn-xs btn-info previewButton'>Preview</button>&nbsp;&nbsp;<button type='button' id='" + i + "' class='btn btn-xs btn-success pasteButton'>Paste</button></div><hr class='pasteDoc'>");
+                } 
+                        $('.pasteButton').click(function(event) {
+                            $(function() {
+                                $.ajax({
+                                    url: sUrl[event.target.id],
+                                    data: "text/html",
+                                    type: "GET",
+                                    context: this,
+                                    error: function() {},
+                                    dataType: 'json',
+                                    success: function(response) {
+                                        beforeCommand($editable);
+                                        var textNode = rng.insertNode(dom.createText(response.content));
+                                        range.create(textNode, dom.nodeLength(textNode)).select();
+                                        afterCommand($editable);
+                                    }
+                                });
+                            });
+                        });
+                        
+                        $('.previewButton').click(function(event) {
+                            $(function() {
+                            	var url = event.target.id;
+                            	window.open(url, '_blank');
+                            });
+                        });
+            });
+    };
     
-    this.searchInDbChoice = function($editable, sUrl, filename) { //XXX
+    this.searchInDbChoice = function($editable, sUrl, filename) { 
         $('.listedImages').remove();
         $('#page-selection').remove();
         $('#content').remove();
@@ -4888,7 +4951,7 @@
     //  handler.invoke('editor.searchInDb', $editable);
 
   	  handler.searchInDbs(layoutInfo);
-      this.showImageDialog($editable, $dialog).then(function (data) {  //XXX
+      this.showImageDialog($editable, $dialog).then(function (data) {
     //	     handler.searchInDbs(layoutInfo, data);
           handler.invoke('editor.restoreRange', $editable);
             
@@ -4995,7 +5058,6 @@
     this.showHelpDialog = function ($editable, $dialog) {
       return $.Deferred(function (deferred) {
         var $helpDialog = $dialog.find('.note-help-dialog');
-
         $helpDialog.one('hidden.bs.modal', function () {
           deferred.resolve();
         }).modal('show');
@@ -5015,6 +5077,42 @@
       });
     };
   };
+
+  var PastedocDialog = function (handler) {
+	    /**
+	     * show pastedoc dialog
+	     *
+	     * @param {jQuery} $editable
+	     * @param {jQuery} $dialog
+	     * @return {Promise}
+	     */
+	    this.showPastedocDialog = function ($editable, $dialog) {
+	      return $.Deferred(function (deferred) {
+	        var $pastedocDialog = $dialog.find('.note-pastedoc-dialog');
+	        console.log('this.showPastedocDialog');
+	        $pastedocDialog.one('hidden.bs.modal', function () {
+	          deferred.resolve();
+	        }).modal('show');
+	      }).promise();
+	    };
+
+	    /**
+	     * @param {Object} layoutInfo
+	     */
+	    this.show = function (layoutInfo) {
+	      var $dialog = layoutInfo.dialog(),
+	          $editable = layoutInfo.editable();
+	      console.log('this.show');
+	      handler.searchInDocs(layoutInfo);
+	      handler.invoke('editor.saveRange', $editable, true);
+	      handler.invoke('editor.searchInDoc', $editable);
+	      this.showPastedocDialog($editable, $dialog).then(function (data) {
+	    	  console.log('data: ' + data);
+		    handler.invoke('editor.insertDoc', layoutInfo.editable(), data);
+		       handler.invoke('editor.restoreRange', $editable);
+	      });
+	    };
+	  };
 
 
   /**
@@ -5040,6 +5138,7 @@
       clipboard: new Clipboard(this),
       linkDialog: new LinkDialog(this),
       imageDialog: new ImageDialog(this),
+      pastedocDialog: new PastedocDialog(this),
       helpDialog: new HelpDialog(this)
     };
 
@@ -5128,6 +5227,19 @@
        } 
       };
       
+      this.searchInDocs = function (layoutInfo, files) { //XXX
+          var $editor = layoutInfo.editor(),
+              $editable = layoutInfo.editable(),
+              $holder = layoutInfo.holder();
+          console.log("this.searchInDocs");
+          var callbacks = $editable.data('callbacks');
+          var options = $editor.data('options');
+          // If onImageSearch options setted
+         if (callbacks.onDocSearch) {
+            callbacks.onDocSearch(files, modules.editor, $editable);
+            bindCustomEvent($holder, 'image.search')([files]);
+         } 
+        };
     var commands = {
       /**
        * @param {Object} layoutInfo
@@ -5142,6 +5254,11 @@
       showImageDialog: function (layoutInfo) {
         modules.imageDialog.show(layoutInfo);
       },
+      
+      showPastedocDialog: function (layoutInfo) {
+          modules.pastedocDialog.show(layoutInfo);
+        },
+
 
       /**
        * @param {Object} layoutInfo
@@ -5456,7 +5573,8 @@
         onImageUploadError: options.onImageUploadError,
         onFileUpload: options.onFileUpload,
         onFileUploadError: options.onFileUpload,
-        onMediaDelete : options.onMediaDelete
+        onMediaDelete : options.onMediaDelete,
+        onDocSearch: options.onDocSearch
       });
 
       // Textarea: auto filling the code before form submit.
@@ -5656,6 +5774,13 @@
     };
 
     var tplButtonInfo = {
+      pastedoc: function (lang, options) {
+    	return tplIconButton(options.iconPrefix + 'file-text-o', {
+    	event: 'showPastedocDialog',
+    	title: lang.pastedoc.pastedoc,
+    	hide: true
+    	});
+    	},
       picture: function (lang, options) {
         return tplIconButton(options.iconPrefix + 'picture-o', {
           event: 'showImageDialog',
@@ -6152,6 +6277,16 @@
         
         var footer =  '<button href="#" class="col-md-12 btn btn-primary note-dbAllSearch-btn ">' + lang.image.allSearch + '</button>';
         return tplDialog('note-image-dialog', lang.image.insert, body, footer);
+      },
+
+      pastedoc: function (lang, options) {
+				        var body = '<div class="form-group row-fluid note-doc-files">' +
+				        '<label>' + lang.image.selectFromFiles + '</label>' +
+				        '<div class="row-fluid paginator"></div>' +
+				        '<div class="row-fluid doc-contents"></div>' +
+				      '</div>';
+				        var footer = '';
+        return tplDialog('note-pastedoc-dialog', lang.pastedoc.insert, body, footer);
       },
 
       link: function (lang, options) {
