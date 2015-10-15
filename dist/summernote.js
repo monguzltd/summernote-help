@@ -3556,7 +3556,6 @@
 		   	 var pageCount = function () {
 				    return Math.ceil(sUrl.length / itemsPerPage);
 			 };
-            event.preventDefault();
             $('.paginator').bootpag({
                 total: pageCount(), // total pages
                 page: 1, // default page
@@ -6982,4 +6981,4 @@
       return this;
     }
   });
-}))
+})
