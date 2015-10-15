@@ -3550,11 +3550,15 @@
       });
     };
         
-    this.searchInDocChoice = function($editable, sUrl, filename) {
+    this.searchInDocChoice = function($editable, sUrl, filename, language) {
         var rng = this.createRange($editable);
+        var itemsPerPage = 10
+		   	 var pageCount = function () {
+				    return Math.ceil(sUrl.length / itemsPerPage);
+			 };
             event.preventDefault();
             $('.paginator').bootpag({
-                total: 50, // total pages
+                total: pageCount(), // total pages
                 page: 1, // default page
                 maxVisible: 5, // visible pagination
                 firstLastUse: true,
@@ -3565,15 +3569,26 @@
             setTimeout(function() {
                 $('.paginator').trigger("page");
             }, 1);
+            $('.note-doc-files').show();
             var form = $(this);
             $('.paginator').on("page", function(event, num) {
                 if (num === undefined) {
                     num = 1;
                 }
                 $('.doc-contents').empty();
-                for (var i = num - 1; i < num + 9; ++i) {
-                   $('.doc-contents').append("<div class='doc-content row-fluid' id='" + i + "'>" +"<h5>" +filename[i] +"</h5>" + "&nbsp;&nbsp;<button type='button' id='" + sUrl[i] + "' class='btn btn-xs btn-info previewButton'>Preview</button>&nbsp;&nbsp;<button type='button' id='" + i + "' class='btn btn-xs btn-success pasteButton'>Paste</button></div><hr class='pasteDoc'>");
+        	    var currentPage = num;
+        	    var begin = ((currentPage - 1) * itemsPerPage),
+        	        end = begin + itemsPerPage;
+                for (var i = begin; i < end; ++i) {
+               
+                if(filename[i] !== undefined) {
+                   $('.doc-contents').append("<div class='doc-content col-md-6' id='" + i + "'>" +"<h5 class='col-md-10'>" +filename[i] +"&nbsp;[" +language[i]+"]&nbsp;" +"</h5>" + "&nbsp;&nbsp;<button type='button' id='" + sUrl[i] + "' class='btn btn-xm btn-info previewButton'>Preview</button>&nbsp;&nbsp;<button type='button' id='" + i + "' class='btn btn-xm btn-success pasteButton'>Paste</button></div>");
+                }
+                   $('.doc-contents').hide();
                 } 
+                $('.doc-contents').fadeIn( "slow", function() {
+                    // Animation complete
+                });
                         $('.pasteButton').click(function(event) {
                             $(function() {
                                 $.ajax({
@@ -3581,13 +3596,20 @@
                                     data: "text/html",
                                     type: "GET",
                                     context: this,
-                                    error: function() {},
+                                    error: function() {alert("This document is not in the correct format (html)")},
                                     dataType: 'json',
                                     success: function(response) {
+//                                        beforeCommand($editable);
+//                                        var textNode = rng.insertNode(dom.createText(response.content));
+//                                        range.create(textNode, dom.nodeLength(textNode)).select();
+//                                        afterCommand($editable);  
                                         beforeCommand($editable);
-                                        var textNode = rng.insertNode(dom.createText(response.content));
+                                        var textNode = rng.insertNode(dom.createText("[["+ filename[event.target.id] +"#"+language[event.target.id] + "]]"));
                                         range.create(textNode, dom.nodeLength(textNode)).select();
                                         afterCommand($editable);
+                                        setTimeout(function() {
+                                            $('.close').trigger("click");
+                                        }, 2);
                                     }
                                 });
                             });
@@ -3611,13 +3633,18 @@
         var $insertBtn = $('.note-image-btn');
         var filter=  "<div><input class=\"form-control\" type=\"text\" ng-model=\"filterText\" name=\"name\" id=\"name\"/></div>";
         var paginator = "<p id=\"page-selection\"></p><div class='row-fluid' id='content'>";
-        
+
         $dbBtn.click(function(event) {
           	event.preventDefault();
         	$('.form-group').hide();
             $('#page-selection').remove();
             $('#content').remove();
-            $('.modal-footer').append(paginator);
+            $('.picturesContent').append(paginator);
+            setTimeout(function() {
+                $('#page-selection').trigger("page");
+            }, 1);
+            setTimeout( function() {$('.pagination.bootpag li:eq( 3 )').trigger("click"); }, 1);
+            setTimeout( function() {$('.pagination.bootpag li:eq( 2 )').trigger("click"); }, 2);
             $('#page-selection').bootpag({
                 total: sUrl.length - 1, // total pages
                 page: 1, // default page
@@ -3627,24 +3654,33 @@
                 last: '→',
                 leaps: false
             });
-            setTimeout( function() {$('#page-selection').trigger("page"); console.log('trigger')}, 1);
+
              $('#page-selection').on("page", function(event, num) {
+            	  var itemsPerPage = 5
+          	    var currentPage = num;
+          	    var begin = ((currentPage - 1) * itemsPerPage),
+          	        end = begin + itemsPerPage;
             	$('.listedImages').remove();
             	if(num === undefined) {
-            		num = 0;
+            		num = 1;
             	}
-                var output = "<h4 class='filename'>"+filename[num]+"</h4>" + "<img class='img-responsive listedImages' src=\"" + sUrl[num] + "\">";
                 $('#content').empty();
-                $('#content').html(output);
+            	for (var i = begin; i < end; ++i) {
+                var output = "<h4 class='filename'>"+filename[i]+"</h4>" + "<img class='img-responsive listedImages' id='" + sUrl[i] + "' src=\"" + sUrl[i] + "\"><hr>";
+                $('#content').append(output);
+                $('#content').hide();
+            	}
+                $('#content').fadeIn( "slow", function() {
+                    // Animation complete
+                });
                 $('.listedImages').click(function(event) {
                     $(function() {
-                        $('.note-image-url').val(sUrl[num]);
+                        $('.note-image-url').val(event.target.id);
                         $('.note-image-btn').trigger("click");
                     });
                 });
-            });
+            });     
         });
-
     };
     /**
      * @method insertNode
@@ -5089,7 +5125,7 @@
 	    this.showPastedocDialog = function ($editable, $dialog) {
 	      return $.Deferred(function (deferred) {
 	        var $pastedocDialog = $dialog.find('.note-pastedoc-dialog');
-	        console.log('this.showPastedocDialog');
+	        
 	        $pastedocDialog.one('hidden.bs.modal', function () {
 	          deferred.resolve();
 	        }).modal('show');
@@ -5102,12 +5138,12 @@
 	    this.show = function (layoutInfo) {
 	      var $dialog = layoutInfo.dialog(),
 	          $editable = layoutInfo.editable();
-	      console.log('this.show');
+	      
 	      handler.searchInDocs(layoutInfo);
 	      handler.invoke('editor.saveRange', $editable, true);
 	      handler.invoke('editor.searchInDoc', $editable);
 	      this.showPastedocDialog($editable, $dialog).then(function (data) {
-	    	  console.log('data: ' + data);
+	    	  
 		    handler.invoke('editor.insertDoc', layoutInfo.editable(), data);
 		       handler.invoke('editor.restoreRange', $editable);
 	      });
@@ -5231,7 +5267,7 @@
           var $editor = layoutInfo.editor(),
               $editable = layoutInfo.editable(),
               $holder = layoutInfo.holder();
-          console.log("this.searchInDocs");
+          
           var callbacks = $editable.data('callbacks');
           var options = $editor.data('options');
           // If onImageSearch options setted
@@ -6264,6 +6300,7 @@
                      '<input class="note-image-input" type="file" name="files" accept="image/*" multiple="multiple" />' +
                      imageLimitation +
                    '</div>' +
+                 	'<div class="picturesContent"></div>' +
                    '<label>' + lang.image.url + '</label>' +
                    '<div class="form-group row-fluid">' +
                     
@@ -6271,8 +6308,9 @@
                    '<div class="form-group row-fluid fromDB">' +
                    '<label>' + lang.image.urlFromDb + '</label>' +
                    '<input class="note-image-urlFromDb form-control col-md-10" type="text" />' +
-               
+           
                  '<button href="#" class="col-md-2 btn btn-default note-dbSearch-btn ">' + lang.image.search + '</button>' +
+           
                  '</div>';
         
         var footer =  '<button href="#" class="col-md-12 btn btn-primary note-dbAllSearch-btn ">' + lang.image.allSearch + '</button>';
@@ -6685,7 +6723,7 @@
      * $.summernote.addPlugin({
      *     events : {
      *          'hello' : function(layoutInfo, value, $target) {
-     *              console.log('event name is hello, value is ' + value );
+     *              
      *          }
      *     }     
      * })
@@ -6944,4 +6982,4 @@
       return this;
     }
   });
-}));
+}))
