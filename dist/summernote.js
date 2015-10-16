@@ -3553,6 +3553,7 @@
     this.searchInDocChoice = function($editable, sUrl, filename, language) {
         var rng = this.createRange($editable);
         var itemsPerPage = 10
+    	var regex = new RegExp("<img ", "g");
 		   	 var pageCount = function () {
 				    return Math.ceil(sUrl.length / itemsPerPage);
 			 };
@@ -3591,17 +3592,22 @@
                         $('.pasteButton').click(function(event) {
                             $(function() {
                                 $.ajax({
+                              
                                     url: sUrl[event.target.id],
                                     data: "text/html",
                                     type: "GET",
                                     context: this,
-                                    error: function() {alert("This document is not in the correct format (html)")},
-                                    dataType: 'json',
+                                    error: function() {alert("This document is not in the correct format(html)")},
+                                    dataType: 'html',
                                     success: function(response) {
-//                                        beforeCommand($editable);
-//                                        var textNode = rng.insertNode(dom.createText(response.content));
-//                                        range.create(textNode, dom.nodeLength(textNode)).select();
-//                                        afterCommand($editable);  
+                                        beforeCommand($editable);
+                                        var textNode = rng.insertNode(dom.createText("[["+ filename[event.target.id] +"#"+language[event.target.id] + "]]"));
+                                        range.create(textNode, dom.nodeLength(textNode)).select();
+                                        afterCommand($editable);
+                                        beforeCommand($editable);
+                                        var textNode = rng.insertNode($('<div>' + response.replace(regex, "<img class=\"img-responsive\" ") + '</div>')[0]);
+                                        range.create(textNode, dom.nodeLength(textNode)).select();
+                                        afterCommand($editable);  
                                         beforeCommand($editable);
                                         var textNode = rng.insertNode(dom.createText("[["+ filename[event.target.id] +"#"+language[event.target.id] + "]]"));
                                         range.create(textNode, dom.nodeLength(textNode)).select();
