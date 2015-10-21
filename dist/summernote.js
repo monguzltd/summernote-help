@@ -6311,11 +6311,9 @@
                     
                      '<input class="note-image-url form-control col-md-10" type="text" />'   + '<button href="#" class="col-md-2  btn btn-primary note-image-btn disabled" disabled>' + lang.image.insert + '</button></div>'+
                    '<div class="form-group row-fluid fromDB">' +
-                   '<label>' + lang.image.urlFromDb + '</label>' +
-                   '<input class="note-image-urlFromDb form-control col-md-10" type="text" />' +
-           
-                 '<button href="#" class="col-md-2 btn btn-default note-dbSearch-btn ">' + lang.image.search + '</button>' +
-           
+//                   '<label>' + lang.image.urlFromDb + '</label>' +
+//                   '<input class="note-image-urlFromDb form-control col-md-10" type="text" />' +
+//                 '<button href="#" class="col-md-2 btn btn-default note-dbSearch-btn ">' + lang.image.search + '</button>' +
                  '</div>';
         
         var footer =  '<button href="#" class="col-md-12 btn btn-primary note-dbAllSearch-btn ">' + lang.image.allSearch + '</button>';
