@@ -3615,6 +3615,7 @@
                                         setTimeout(function() {
                                             $('.close').trigger("click");
                                         }, 2);
+                                        $("html, body").animate({ scrollTop: $(".note-editable").offset().top }, 400);
                                     }
                                 });
                             });
