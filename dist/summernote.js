@@ -5021,8 +5021,6 @@
             $imageBtn = $dialog.find('.note-image-btn');
         	$('.filename').remove();
         	toggleBtn($imageBtn);
-        	
-        	console.log('show')
         $imageDialog.one('shown.bs.modal', function () {
           // Cloning imageInput to clear element.
           $imageInput.replaceWith($imageInput.clone()
@@ -5034,7 +5032,6 @@
           );
           
           $imageSearchBtn.on('click', function (event) {
-        	  console.log('clicked')
         	event.preventDefault();
         	deferred.resolve('search')
         	$imageDialog.modal('hide');
