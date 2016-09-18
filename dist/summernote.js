@@ -4765,7 +4765,6 @@
         if (dataTransfer && dataTransfer.files && dataTransfer.files.length) {
           layoutInfo.editable().focus();
           handler.insertImages(layoutInfo, dataTransfer.files);
-          handler.searchInDbs(layoutInfo, dataTransfer.files);
         } else if (html) {
           $(html).each(function () {
             layoutInfo.editable().focus();
@@ -4846,7 +4845,6 @@
           handler.invoke('editor.restoreNode', $editable);
           handler.invoke('editor.restoreRange', $editable);
           handler.insertImages(layoutInfo, [blob]);
-          handler.searchInDbs(layoutInfo, [blob]);
 
           handler.invoke('editor.afterCommand', $editable);
         }, 0);
@@ -4859,7 +4857,6 @@
 
       if (isClipboardImage) {
         handler.insertImages(layoutInfo, [item.getAsFile()]);
-        handler.searchInDbs(layoutInfo, [item.getAsFile()]);
       }
 
       handler.invoke('editor.afterCommand', $editable);
@@ -4990,23 +4987,18 @@
 
       handler.invoke('editor.saveRange', $editable);
       handler.invoke('editor.searchInDb', $editable);
-    //  handler.invoke('editor.searchInDb', $editable);
-
-  	  handler.searchInDbs(layoutInfo);
       this.showImageDialog($editable, $dialog).then(function (data) {
-    //	     handler.searchInDbs(layoutInfo, data);
-          handler.invoke('editor.restoreRange', $editable);
-            
-        if($dialog.find('.note-image-urlFromDb').val() != "") {
-        	handler.searchInDbs(layoutInfo, data);
-        }
+        handler.invoke('editor.restoreRange', $editable);
         if (typeof data === 'string') {
-          // image url        
-           handler.invoke('editor.insertImage', $editable, data);
+        	if (data === 'search') {
+	    	  handler.searchInDbs(layoutInfo, $editable);
+      		} else {
+      			// image url      
+      			handler.invoke('editor.insertImage', $editable, data);
+      		}
         } else {
-           // handler.searchInDbs(layoutInfo, data);
-          // array of files -browse
-          handler.insertImages(layoutInfo, data);   	
+        	// array of files -browse
+        	handler.insertImages(layoutInfo, data);   	
         }
       }).fail(function () {
         handler.invoke('editor.restoreRange', $editable);
@@ -5025,11 +5017,12 @@
         var $imageDialog = $dialog.find('.note-image-dialog');
         var $imageInput = $dialog.find('.note-image-input'),
             $imageUrl = $dialog.find('.note-image-url'),
-            $imageUrlFromDb = $dialog.find('.note-image-urlFromDb'),
-        	$dbBtn = $dialog.find('.note-dbSearch-btn'),
+        	$imageSearchBtn = $dialog.find('.note-img-search-btn'),
             $imageBtn = $dialog.find('.note-image-btn');
         	$('.filename').remove();
-       
+        	toggleBtn($imageBtn);
+        	
+        	console.log('show')
         $imageDialog.one('shown.bs.modal', function () {
           // Cloning imageInput to clear element.
           $imageInput.replaceWith($imageInput.clone()
@@ -5039,21 +5032,12 @@
             })
             .val('')
           );
-
-        	$dbBtn.on('click', function () {
-
-              var url =$('.note-image-urlFromDb').val();
-         
-              var output = "<h4 class='filename'>"+url+"</h4>" + "<img class='img-responsive listedImages' src=\"" + url + "\">";
-              $('.modal-body').append(output);
-              $('.listedImages').click(function(event) {
-                  $(function() {
-                      $('.note-image-url').val(url);
-                      $('.note-image-btn').trigger("click");
-                  });
-              });
-         
-            toggleBtn($imageBtn, url);
+          
+          $imageSearchBtn.on('click', function (event) {
+        	  console.log('clicked')
+        	event.preventDefault();
+        	deferred.resolve('search')
+        	$imageDialog.modal('hide');
           });
   
           $imageBtn.click(function (event) {
@@ -5078,8 +5062,8 @@
         }).one('hidden.bs.modal', function () {
           $imageInput.off('change');
           $imageUrl.off('keyup paste');
-          $imageUrlFromDb.off('keyup paste');
           $imageBtn.off('click');
+          $imageSearchBtn.off('click');
 
           if (deferred.state() === 'pending') {
             deferred.reject();
@@ -5255,7 +5239,7 @@
       }
     };
 
-    this.searchInDbs = function (layoutInfo, files) { //XXX
+    this.searchInDbs = function (layoutInfo) { //XXX
         var $editor = layoutInfo.editor(),
             $editable = layoutInfo.editable(),
             $holder = layoutInfo.holder();
@@ -5263,25 +5247,24 @@
         var callbacks = $editable.data('callbacks');
         var options = $editor.data('options');
         // If onImageSearch options setted
-       if (callbacks.onImageSearch) {
-          callbacks.onImageSearch(files, modules.editor, $editable);
-          bindCustomEvent($holder, 'image.search')([files]);
-       } 
-      };
+        if (callbacks.onImageSearch) {
+        	callbacks.onImageSearch(modules.editor, $editable);
+        	bindCustomEvent($holder, 'image.search')();
+        } 
+    };
       
-      this.searchInDocs = function (layoutInfo, files) { //XXX
-          var $editor = layoutInfo.editor(),
-              $editable = layoutInfo.editable(),
-              $holder = layoutInfo.holder();
-          
-          var callbacks = $editable.data('callbacks');
-          var options = $editor.data('options');
-          // If onImageSearch options setted
-         if (callbacks.onDocSearch) {
-            callbacks.onDocSearch(files, modules.editor, $editable);
-            bindCustomEvent($holder, 'image.search')([files]);
-         } 
-        };
+    this.searchInDocs = function (layoutInfo, files) { //XXX
+    	var $editor = layoutInfo.editor(),
+            $editable = layoutInfo.editable(),
+            $holder = layoutInfo.holder();
+        
+        var callbacks = $editable.data('callbacks');
+        var options = $editor.data('options');
+        // If onDocSearch options setted
+        if (callbacks.onDocSearch) {
+        	callbacks.onDocSearch(modules.editor, $editable);
+        } 
+    };
     var commands = {
       /**
        * @param {Object} layoutInfo
@@ -6308,16 +6291,12 @@
                    '</div>' +
                  	'<div class="picturesContent"></div>' +
                    '<label>' + lang.image.url + '</label>' +
-                   '<div class="form-group row-fluid">' +
-                    
-                     '<input class="note-image-url form-control col-md-10" type="text" />'   + '<button href="#" class="col-md-2  btn btn-primary note-image-btn disabled" disabled>' + lang.image.insert + '</button></div>'+
-                   '<div class="form-group row-fluid fromDB">' +
-//                   '<label>' + lang.image.urlFromDb + '</label>' +
-//                   '<input class="note-image-urlFromDb form-control col-md-10" type="text" />' +
-//                 '<button href="#" class="col-md-2 btn btn-default note-dbSearch-btn ">' + lang.image.search + '</button>' +
-                 '</div>';
+                   '<div class="form-group">' +
+                     '<input class="note-image-url form-control col-md-10" type="text" />' + 
+                   '</div>'
         
-        var footer =  '<button href="#" class="col-md-12 btn btn-primary note-dbAllSearch-btn ">' + lang.image.allSearch + '</button>';
+        var footer =  '<button href="#" class="btn btn-primary note-image-btn disabled" disabled>' + lang.image.insert + '</button>' +
+        			  '<button class="btn btn-primary note-img-search-btn">' + lang.image.allSearch + '</button>';
         return tplDialog('note-image-dialog', lang.image.insert, body, footer);
       },
 
